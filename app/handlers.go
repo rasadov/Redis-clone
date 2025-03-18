@@ -71,11 +71,6 @@ func handleConnection(conn net.Conn) {
 			}
 			writeBulkString(conn, "OK")
 		case "CONFIG":
-			fmt.Println("We are here")
-
-			fmt.Println(len(array))
-			fmt.Println(array)
-
 			cmd2 := strings.ToUpper(array[1])
 
 			switch cmd2 {
@@ -86,7 +81,10 @@ func handleConnection(conn net.Conn) {
 				return
 			default:
 			}
-
+		case "KEYS":
+			pattern := array[1]
+			keys := Storage.Keys(pattern)
+			writeArray(conn, keys)
 		default:
 			writeErrorString(conn, fmt.Sprintf("unknown command '%s'", cmd))
 		}

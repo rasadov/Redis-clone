@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 )
@@ -53,4 +54,23 @@ func (s *InMemoryStorage) SetKeyWithTTL(key string, value string, ttl time.Durat
 		value:      value,
 		expiration: expire,
 	}
+}
+
+func (s *InMemoryStorage) Keys(pattern string) []string {
+	var res []string
+	patterns := strings.Split(pattern, "*")
+	prefix := patterns[0]
+	suffix := patterns[len(patterns)-1]
+
+	if prefix == "*" {
+		prefix = ""
+	}
+	if suffix == "*" {
+		suffix = ""
+	}
+
+	for key, _ := range s.data {
+		res = append(res, key)
+	}
+	return res
 }
