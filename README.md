@@ -1,33 +1,36 @@
-[![progress-banner](https://backend.codecrafters.io/progress/redis/44872a99-2aaf-4f13-be7f-20a6f343df10)](https://app.codecrafters.io/users/codecrafters-bot?r=2qF)
+# Redis Clone
 
-This is a starting point for Go solutions to the
-["Build Your Own Redis" Challenge](https://codecrafters.io/challenges/redis).
+## Functionality
+Notes:
+* In the example below I am using `redis-cli` and regular strings to simply explain logic. In the app itself the RESP protocol is being used for communication
+* Redis command names are case-insensitive, so ECHO, echo and EcHo are all valid commands.
 
-In this challenge, you'll build a toy Redis clone that's capable of handling
-basic commands like `PING`, `SET` and `GET`. Along the way we'll learn about
-event loops, the Redis protocol and more.
-
-**Note**: If you're viewing this repo on GitHub, head over to
-[codecrafters.io](https://codecrafters.io) to try the challenge.
-
-# Passing the first stage
-
-The entry point for your Redis implementation is in `app/main.go`. Study and
-uncomment the relevant code, and push your changes to pass the first stage:
-
-```sh
-git commit -am "pass 1st stage" # any msg
-git push origin master
+1. `PING` - for checking health. Supposed to return "PONG" as response
+```bash
+  $ redis-cli PING
+  PONG
 ```
-
-That's all!
-
-# Stage 2 & beyond
-
-Note: This section is for stages 2 and beyond.
-
-1. Ensure you have `go (1.24)` installed locally
-1. Run `./your_program.sh` to run your Redis server, which is implemented in
-   `app/main.go`.
-1. Commit your changes and run `git push origin master` to submit your solution
-   to CodeCrafters. Test output will be streamed to your terminal.
+2. `ECHO` - returns same message that was sent
+```bash
+  $ redis-cli echo message
+  message
+```
+* Note: if echo receives more than one word it will return an error
+```bash
+  $ redis-cli echo some message 
+  Wrong number of arguments for 'ECHO' command
+```
+3. `SET` - command used to set a key to a value. Can accept px argument which is a keyword for expiry. The value is passed of expire is passed in milliseconds
+```bash
+  $ redis-cli set foo bar 
+```
+Or set expiration to be 100 milliseconds
+```bash
+  $ redis-cli set foo bar px 100 
+```
+4. `GET` - command used for getting a value with key. Returns null bulk string in case if it's not set or expired 
+```bash
+  $ redis-cli set foo bar
+  $ redis-cli get foo
+  bar
+```
