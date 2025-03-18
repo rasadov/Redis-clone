@@ -6,23 +6,35 @@ import (
 	"os"
 )
 
-// Ensures gofmt doesn't remove the "net" and "os" imports in stage 1 (feel free to remove this!)
-var _ = net.Listen
-var _ = os.Exit
+var (
+	conn      net.Conn
+	l         net.Listener
+	err       error
+	message   = make([]byte, 1024)
+	bytesRead int
+)
 
 func main() {
-	l, err := net.Listen("tcp", "0.0.0.0:6379")
+
+	l, err = net.Listen("tcp", "0.0.0.0:6379")
 	if err != nil {
 		fmt.Println("Failed to bind to port 6379")
 		os.Exit(1)
 	}
-	conn, err := l.Accept()
+	fmt.Println("Listening on port 6379...")
+	conn, err = l.Accept()
 	if err != nil {
 		fmt.Println("Error accepting connection: ", err.Error())
 		os.Exit(1)
 	}
-
-	conn.Write([]byte("+PONG\r\n"))
-
-	fmt.Println("Listening on port 6379")
+	for {
+		bytesRead, err = conn.Read(message)
+		if err != nil {
+			fmt.Println("Error reading from connection: ", err.Error())
+			break
+		}
+		if bytesRead != 0 {
+			conn.Write([]byte("+PONG\r\n"))
+		}
+	}
 }
