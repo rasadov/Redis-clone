@@ -3,9 +3,15 @@ package main
 import (
 	"fmt"
 	"io"
+	"net"
 )
 
 // writeSimpleString writes something like: +OK\r\n
+func writeString(conn net.Conn, s string) {
+	// Just write the raw bytes, no extra escapes/quotes
+	conn.Write([]byte(s))
+}
+
 func writeSimpleString(w io.Writer, msg string) {
 	fmt.Fprintf(w, "+%s\r\n", msg)
 }

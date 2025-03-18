@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strconv"
 	"strings"
+	"time"
 )
 
 var (
@@ -77,7 +79,7 @@ func handleConnection(conn net.Conn) {
 				writeErrorString(conn, "Wrong number of arguments for 'ECHO' command")
 				continue
 			}
-			echoMsg := array[1] // The text to echo
+			echoMsg := array[1]
 			writeBulkString(conn, echoMsg)
 
 		case "GET":
@@ -86,12 +88,24 @@ func handleConnection(conn net.Conn) {
 			if ok {
 				writeBulkString(conn, value)
 			} else {
-				writeSimpleString(conn, "$-1\\r\\n")
+				writeString(conn, "$-1\r\n")
 			}
 
 		case "SET":
 			key, value := array[1], array[2]
-			Storage.SetKey(key, value)
+			fmt.Println("Array ", array)
+			withTtl := len(array) > 3 && strings.ToUpper(array[3]) == "PX"
+			if withTtl {
+				ttl, err := strconv.Atoi(array[4])
+				if err != nil {
+					writeErrorString(conn, "Error parsing expiration time")
+					return
+				}
+				ttlDuration := time.Duration(ttl) * time.Millisecond
+				Storage.SetKeyWithTTL(key, value, ttlDuration)
+			} else {
+				Storage.SetKey(key, value)
+			}
 			writeBulkString(conn, "OK")
 
 		default:
