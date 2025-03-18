@@ -1,61 +1,101 @@
 package main
 
 import (
-	"context"
+	"bufio"
 	"fmt"
+	"io"
 	"net"
-	"os"
-	"time"
+	"strings"
+)
+
+var (
+	Storage *InMemoryStorage
 )
 
 func main() {
-	l, err := net.Listen("tcp", "0.0.0.0:6379")
-	if err != nil {
-		fmt.Println("Failed to bind to port 6379")
-		os.Exit(1)
+	Storage = NewInMemoryStorage()
+	eventLoop := &EventLoop{
+		mainTasks: make(chan Task, 100),
+		stop:      make(chan bool),
 	}
-	fmt.Println("Listening on port 6379...")
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	wg := InitEventLoop(eventLoop, 5)
+
+	listener, err := net.Listen("tcp", "0.0.0.0:6379")
+	if err != nil {
+		fmt.Println("Failed to bind to port 6379:", err)
+		return
+	}
+	defer listener.Close()
+	fmt.Println("Listening on port 6379...")
 
 	go func() {
 		for {
-			conn, err := l.Accept()
+			conn, err := listener.Accept()
 			if err != nil {
-				fmt.Println("Error accepting connection: ", err.Error())
+				fmt.Println("Error accepting connection:", err)
 				continue
 			}
-			go handleConnection(ctx, conn)
+
+			// Add connection handling to the event loop
+			AddToEventLoop(eventLoop, Task{
+				MainTask:   handleConnection,
+				IsBlocking: true,
+			}, conn)
 		}
 	}()
 
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-			time.Sleep(100 * time.Second)
-		}
-	}
+	wg.Wait()
 }
 
-func handleConnection(ctx context.Context, conn net.Conn) {
+func handleConnection(conn net.Conn) {
 	defer conn.Close()
-	message := make([]byte, 1024)
+	reader := bufio.NewReader(conn)
+
 	for {
-		select {
-		case <-ctx.Done():
+		array, err := ReadArray(reader)
+		if err != nil {
+			if err == io.EOF {
+				fmt.Println("Client disconnected.")
+			} else {
+				fmt.Println("Error parsing command:", err)
+			}
 			return
+		}
+
+		if len(array) == 0 {
+			continue
+		}
+
+		cmd := strings.ToUpper(array[0])
+		switch cmd {
+		case "PING":
+			writeSimpleString(conn, "PONG")
+
+		case "ECHO":
+			if len(array) < 2 {
+				writeErrorString(conn, "Wrong number of arguments for 'ECHO' command")
+				continue
+			}
+			echoMsg := array[1] // The text to echo
+			writeBulkString(conn, echoMsg)
+
+		case "GET":
+			key := array[1]
+			value, ok := Storage.Get(key)
+			if ok {
+				writeBulkString(conn, value)
+			} else {
+				writeSimpleString(conn, "$-1\\r\\n")
+			}
+
+		case "SET":
+			key, value := array[1], array[2]
+			Storage.SetKey(key, value)
+			writeBulkString(conn, "OK")
+
 		default:
-			bytesRead, err := conn.Read(message)
-			if err != nil {
-				fmt.Println("Error reading from connection: ", err.Error())
-				return
-			}
-			if bytesRead != 0 {
-				conn.Write([]byte("+PONG\r\n"))
-			}
+			writeErrorString(conn, fmt.Sprintf("unknown command '%s'", cmd))
 		}
 	}
 }

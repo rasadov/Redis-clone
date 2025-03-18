@@ -1,0 +1,22 @@
+package main
+
+import (
+	"fmt"
+	"io"
+)
+
+// writeSimpleString writes something like: +OK\r\n
+func writeSimpleString(w io.Writer, msg string) {
+	fmt.Fprintf(w, "+%s\r\n", msg)
+}
+
+// writeErrorString writes something like: -ERR <msg>\r\n
+func writeErrorString(w io.Writer, msg string) {
+	fmt.Fprintf(w, "-ERR %s\r\n", msg)
+}
+
+// writeBulkString writes something like: $3\r\nhey\r\n
+func writeBulkString(w io.Writer, data string) {
+	length := len(data)
+	fmt.Fprintf(w, "$%d\r\n%s\r\n", length, data)
+}
