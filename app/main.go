@@ -14,7 +14,8 @@ var (
 
 func main() {
 	InitConfig(os.Args)
-
+	fmt.Println("Args ", os.Args)
+	fmt.Println("Config ", Config)
 	Storage = NewInMemoryStorage()
 	//err := ReadConfig(ConfigFile, Storage)
 

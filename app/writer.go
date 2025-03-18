@@ -26,3 +26,11 @@ func writeBulkString(w io.Writer, data string) {
 	length := len(data)
 	fmt.Fprintf(w, "$%d\r\n%s\r\n", length, data)
 }
+
+func writeArray(w io.Writer, data []string) {
+	res := fmt.Sprintf("*%d\r\n", len(data))
+	for _, val := range data {
+		res += fmt.Sprintf("$%d\r\n%s\r\n", len(val), val)
+	}
+	w.Write([]byte(res))
+}

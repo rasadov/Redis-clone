@@ -45,7 +45,9 @@ func handleConnection(conn net.Conn) {
 
 		case "GET":
 			key := array[1]
+			fmt.Println("Key is", key)
 			value, ok := Storage.Get(key)
+			fmt.Println("Value is", value)
 			if ok {
 				writeBulkString(conn, value)
 			} else {
@@ -69,20 +71,18 @@ func handleConnection(conn net.Conn) {
 			}
 			writeBulkString(conn, "OK")
 		case "CONFIG":
-			if len(array) < 3 {
-				writeErrorString(conn, "Bad request")
-				return
-			}
+			fmt.Println("We are here")
 
-			cmd2 := strings.ToUpper(array[2])
+			fmt.Println(len(array))
+			fmt.Println(array)
+
+			cmd2 := strings.ToUpper(array[1])
 
 			switch cmd2 {
 			case "GET":
-				if len(array) < 4 {
-					return
-				}
-				key := array[3]
-				writeBulkString(conn, Config[key])
+				key := array[2]
+				value, _ := Config[key]
+				writeArray(conn, []string{key, value})
 				return
 			default:
 			}
