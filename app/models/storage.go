@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -13,24 +12,28 @@ type entry struct {
 }
 
 type InMemoryStorage struct {
-	data map[string]entry
-	mu   sync.RWMutex
+	dbIndex     uint64
+	Data        map[string]entry
+	mu          sync.RWMutex
+	size        int
+	sizeWithTTL int
 }
 
-func NewInMemoryStorage() *InMemoryStorage {
+func NewInMemoryStorage(dbIndex uint64) *InMemoryStorage {
 	return &InMemoryStorage{
-		data: make(map[string]entry),
+		Data:        make(map[string]entry),
+		size:        0,
+		sizeWithTTL: 0,
+		dbIndex:     dbIndex,
 	}
 }
 
 func (s *InMemoryStorage) Get(key string) (string, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	val, ok := s.data[key]
-	fmt.Println(val.expiration)
-	fmt.Println(time.Now())
+	val, ok := s.Data[key]
 	if ok && !val.expiration.IsZero() && val.expiration.Before(time.Now()) {
-		delete(s.data, key)
+		delete(s.Data, key)
 		return "", false
 	}
 	return val.value, ok
@@ -39,21 +42,22 @@ func (s *InMemoryStorage) Get(key string) (string, bool) {
 func (s *InMemoryStorage) SetKey(key string, value string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.data[key] = entry{
+	s.Data[key] = entry{
 		value: value,
 	}
+	s.size += 1
 }
 
 func (s *InMemoryStorage) SetKeyWithTTL(key string, value string, ttl time.Duration) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	expire := time.Now().Add(ttl)
-	fmt.Println("TTL: ", ttl)
-	fmt.Println("EXPIRE ", expire)
-	s.data[key] = entry{
+	s.Data[key] = entry{
 		value:      value,
 		expiration: expire,
 	}
+	s.size += 1
+	s.sizeWithTTL += 1
 }
 
 func (s *InMemoryStorage) Keys(pattern string) []string {
@@ -69,7 +73,7 @@ func (s *InMemoryStorage) Keys(pattern string) []string {
 		suffix = ""
 	}
 
-	for key, _ := range s.data {
+	for key, _ := range s.Data {
 		res = append(res, key)
 	}
 	return res

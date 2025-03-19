@@ -43,7 +43,7 @@ func ReadArray(reader *bufio.Reader) ([]string, error) {
 	return result, nil
 }
 
-// parseBulkString expects the next RESP object to be '$<len>\r\n<data>\r\n'.
+// parseBulkString expects the next RESP object to be '$<len>\r\n<Data>\r\n'.
 func parseBulkString(reader *bufio.Reader) (string, error) {
 	b, err := reader.ReadByte()
 	if err != nil {
