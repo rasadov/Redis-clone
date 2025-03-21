@@ -1,6 +1,8 @@
 package main
 
-import "strings"
+import (
+	"strings"
+)
 
 var Config map[string]string
 
@@ -18,17 +20,4 @@ func InitConfig(args []string) {
 			isVal = true
 		}
 	}
-}
-
-func ReadConfig(filename string, storage *InMemoryStorage) error {
-	data, err := readMapFromFile(filename)
-	if err != nil {
-		return err
-	}
-	storage.data = data
-	return nil
-}
-
-func WriteConfig(filename string, data map[string]entry) error {
-	return writeMapToFile(filename, data)
 }

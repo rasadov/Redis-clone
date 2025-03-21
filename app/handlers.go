@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"github.com/rasadov/redis-clone/app/protocol"
 	"io"
 	"net"
 	"strconv"
@@ -15,7 +16,7 @@ func handleConnection(conn net.Conn) {
 	reader := bufio.NewReader(conn)
 
 	for {
-		array, err := ReadArray(reader)
+		array, err := protocol.ReadArray(reader)
 		if err != nil {
 			if err == io.EOF {
 				fmt.Println("Client disconnected.")
@@ -33,15 +34,15 @@ func handleConnection(conn net.Conn) {
 
 		switch cmd {
 		case "PING":
-			writeSimpleString(conn, "PONG")
+			protocol.WriteSimpleString(conn, "PONG")
 
 		case "ECHO":
 			if len(array) < 2 {
-				writeErrorString(conn, "Wrong number of arguments for 'ECHO' command")
+				protocol.WriteErrorString(conn, "Wrong number of arguments for 'ECHO' command")
 				continue
 			}
 			echoMsg := array[1]
-			writeBulkString(conn, echoMsg)
+			protocol.WriteBulkString(conn, echoMsg)
 
 		case "GET":
 			key := array[1]
@@ -49,9 +50,9 @@ func handleConnection(conn net.Conn) {
 			value, ok := Storage.Get(key)
 			fmt.Println("Value is", value)
 			if ok {
-				writeBulkString(conn, value)
+				protocol.WriteBulkString(conn, value)
 			} else {
-				writeString(conn, "$-1\r\n")
+				protocol.WriteString(conn, "$-1\r\n")
 			}
 
 		case "SET":
@@ -61,7 +62,7 @@ func handleConnection(conn net.Conn) {
 			if withTtl {
 				ttl, err := strconv.Atoi(array[4])
 				if err != nil {
-					writeErrorString(conn, "Error parsing expiration time")
+					protocol.WriteErrorString(conn, "Error parsing expiration time")
 					return
 				}
 				ttlDuration := time.Duration(ttl) * time.Millisecond
@@ -69,7 +70,7 @@ func handleConnection(conn net.Conn) {
 			} else {
 				Storage.SetKey(key, value)
 			}
-			writeBulkString(conn, "OK")
+			protocol.WriteBulkString(conn, "OK")
 		case "CONFIG":
 			cmd2 := strings.ToUpper(array[1])
 
@@ -77,16 +78,16 @@ func handleConnection(conn net.Conn) {
 			case "GET":
 				key := array[2]
 				value, _ := Config[key]
-				writeArray(conn, []string{key, value})
+				protocol.WriteArray(conn, []string{key, value})
 				return
 			default:
 			}
 		case "KEYS":
 			pattern := array[1]
 			keys := Storage.Keys(pattern)
-			writeArray(conn, keys)
+			protocol.WriteArray(conn, keys)
 		default:
-			writeErrorString(conn, fmt.Sprintf("unknown command '%s'", cmd))
+			protocol.WriteErrorString(conn, fmt.Sprintf("unknown command '%s'", cmd))
 		}
 	}
 }

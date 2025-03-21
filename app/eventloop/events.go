@@ -1,4 +1,4 @@
-package main
+package eventloop
 
 import (
 	"net"
@@ -11,8 +11,8 @@ type Task struct {
 }
 
 type EventLoop struct {
-	mainTasks chan Task
-	stop      chan bool
+	Tasks chan Task
+	Stop  chan bool
 }
 
 func AddToEventLoop(eventLoop *EventLoop, t Task, conn net.Conn) {
@@ -22,11 +22,11 @@ func AddToEventLoop(eventLoop *EventLoop, t Task, conn net.Conn) {
 		originalHandler(conn)
 	}
 
-	eventLoop.mainTasks <- t
+	eventLoop.Tasks <- t
 }
 
 func StopEventLoop(eventLoop *EventLoop) {
-	eventLoop.stop <- true
+	eventLoop.Stop <- true
 }
 
 func InitEventLoop(eventLoop *EventLoop, workerPoolSize int) *sync.WaitGroup {
@@ -43,7 +43,7 @@ func InitEventLoop(eventLoop *EventLoop, workerPoolSize int) *sync.WaitGroup {
 
 		for {
 			select {
-			case task := <-eventLoop.mainTasks:
+			case task := <-eventLoop.Tasks:
 				if task.IsBlocking {
 					workerPool <- struct{}{}
 					go func() {
@@ -54,7 +54,7 @@ func InitEventLoop(eventLoop *EventLoop, workerPoolSize int) *sync.WaitGroup {
 					task.MainTask(nil)
 				}
 
-			case <-eventLoop.stop:
+			case <-eventLoop.Stop:
 				return
 			}
 		}

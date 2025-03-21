@@ -1,4 +1,4 @@
-package main
+package models
 
 import (
 	"strings"
@@ -6,14 +6,14 @@ import (
 	"time"
 )
 
-type entry struct {
-	value      string
-	expiration time.Time
+type Entry struct {
+	Value      string
+	Expiration time.Time
 }
 
 type InMemoryStorage struct {
-	dbIndex     uint64
-	Data        map[string]entry
+	Index       uint64
+	Data        map[string]Entry
 	mu          sync.RWMutex
 	size        int
 	sizeWithTTL int
@@ -21,10 +21,10 @@ type InMemoryStorage struct {
 
 func NewInMemoryStorage(dbIndex uint64) *InMemoryStorage {
 	return &InMemoryStorage{
-		Data:        make(map[string]entry),
+		Data:        make(map[string]Entry),
 		size:        0,
 		sizeWithTTL: 0,
-		dbIndex:     dbIndex,
+		Index:       dbIndex,
 	}
 }
 
@@ -32,18 +32,18 @@ func (s *InMemoryStorage) Get(key string) (string, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	val, ok := s.Data[key]
-	if ok && !val.expiration.IsZero() && val.expiration.Before(time.Now()) {
+	if ok && !val.Expiration.IsZero() && val.Expiration.Before(time.Now()) {
 		delete(s.Data, key)
 		return "", false
 	}
-	return val.value, ok
+	return val.Value, ok
 }
 
 func (s *InMemoryStorage) SetKey(key string, value string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.Data[key] = entry{
-		value: value,
+	s.Data[key] = Entry{
+		Value: value,
 	}
 	s.size += 1
 }
@@ -52,9 +52,9 @@ func (s *InMemoryStorage) SetKeyWithTTL(key string, value string, ttl time.Durat
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	expire := time.Now().Add(ttl)
-	s.Data[key] = entry{
-		value:      value,
-		expiration: expire,
+	s.Data[key] = Entry{
+		Value:      value,
+		Expiration: expire,
 	}
 	s.size += 1
 	s.sizeWithTTL += 1
